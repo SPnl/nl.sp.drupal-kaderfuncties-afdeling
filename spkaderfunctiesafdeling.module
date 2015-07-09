@@ -1,0 +1,255 @@
+<?php
+
+require_once('includes/civicrm.inc');
+require_once('includes/utils.inc');
+
+function spkaderfunctiesafdeling_views_api() {
+  return array('api' => 3.0);
+}
+
+function spkaderfunctiesafdeling_views_default_views() {
+  civicrm_initialize();
+  $files = file_scan_directory(drupal_get_path('module', 'spkaderfunctiesafdeling'). '/views', '/.inc/');
+  $views = array();
+  foreach ($files as $filepath => $file) {
+    $view = false;
+    require $filepath;
+    if (!empty($view)) {
+      $views[$view->name] = $view;
+    }
+  }
+  return $views;
+}
+
+/**
+ * Place a link to the view on the contact summary
+ *
+ * Implementation of hook_civicrm_summary
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_summary
+ */
+function spkaderfunctiesafdeling_civicrm_pageRun(&$page) {
+  if ($page instanceof CRM_Contact_Page_View_Summary) {
+    $config = SpKaderfunctiesAfdelingConfigCiviCRM::getInstance();
+
+    $afdelings_contacten = spkaderfunctiesafdeling_get_afdelingscontacten();
+    $contact_id = $page->getVar('_contactId');
+    if (!isset($afdelings_contacten[$contact_id])) {
+      return;
+    }
+    $contact = civicrm_api3('Contact', 'getsingle', array('id' => $contact_id));
+    if ($contact['contact_type'] != 'Organization') {
+      return;
+    }
+    $valid_sub_types = $config->getContactSubTypesForButton();
+    $valid = false;
+    foreach($valid_sub_types as $sub_type) {
+      if (in_array($sub_type, $contact['contact_sub_type'])) {
+        $valid = true;
+        break;
+      }
+    }
+
+    if ($valid) {
+      CRM_Core_Region::instance('page-body')->add(array(
+        'markup' => '<script type="text/javascript">
+            cj(function() {
+              cj(\'li.crm-summary-block\').after(\'<li class="crm-view-kaderfuncties-afdeling-action crm-contact-view-kaderfuncties-afdeling"><a href="'.url('kaderfuncties-afdeling/'.$contact_id).'" class="kaderfuncties-afdeling button" title="Bekijk/Wijzig afdelingsrelaties"><span>Bekijk/Wijzig afdelingsrelaties</span></a></li>\');
+            });
+          </script>
+        '));
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function spkaderfunctiesafdeling_menu() {
+  $items = array();
+  $items['admin/config/sp/kaderfuncties-afdelingen'] = array(
+    'title'            => 'Kaderfuncties afdelingen',
+    'description'      => 'Instellingen voor de view Kaderfuncties afdelingen',
+    'type'             => MENU_NORMAL_ITEM,
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('spkaderfunctiesafdeling_admin_settings_form'),
+    'access arguments' => array('access administration pages'),
+  );
+  $items['kaderfuncties-afdeling/%/beeindig'] = array(
+    'title'            => 'Kaderfunctie beëindigen',
+    'description'      => 'Beëindig een kaderfunctie',
+    'type'             => MENU_NORMAL_ITEM,
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('spkaderfunctiesafdeling_beeindig', 1),
+    'access callback'  => 'spkaderfunctiesafdeling_check_relationship',
+    'access arguments' => array(1),
+    'weight'           => -100
+  );
+  $items['kaderfuncties-afdeling/nieuw'] = array(
+    'title'            => 'Kaderfunctie toevoegen',
+    'description'      => 'Voeg een kaderfunctie toe',
+    'type'             => MENU_NORMAL_ITEM,
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('spkaderfunctiesafdeling_new'),
+    'access callback'  => 'spkaderfunctiesafdeling_check_new',
+    'access arguments' => array(),
+    'weight'           => -100
+  );
+  return $items;
+}
+
+function spkaderfunctiesafdeling_admin_settings_form() {
+  $form = array();
+
+  $form['spkaderfunctiesafdeling_description'] = array(
+    '#markup' => '<h3>Instellingen</h3><p>Geef hieronder de relaties op die via de view kaderfuncties van afdelingen mogen worden toegevoegd</p>',
+  );
+
+  $form['spkaderfunctiesafdeling_end_relationship_types'] = array(
+    '#type'          => 'checkboxes',
+    '#title'         => 'Relatietypes die beëindig mogen worden',
+    '#default_value' => variable_get('spkaderfunctiesafdeling_end_relationship_types', array()),
+    '#description'   => 'Voor deze relatietypes komt er knopje beëindig vanuit de view.',
+    '#required'      => true,
+    '#options'       => spkaderfunctiesafdeling_get_civicrm_relationship_types(),
+  );
+
+  $form['spkaderfunctiesafdeling_new_relationship_types'] = array(
+    '#type'          => 'checkboxes',
+    '#title'         => 'Relatietypes die aangemaakt mogen worden door afdelingsgebruikers',
+    '#default_value' => variable_get('spkaderfunctiesafdeling_new_relationship_types', array()),
+    '#description'   => 'Een afdelingsgebruiker mag voor deze relatietypes nieuwe relaties aanmaken ',
+    '#required'      => true,
+    '#options'       => spkaderfunctiesafdeling_get_civicrm_relationship_types(),
+  );
+
+  return system_settings_form($form);
+}
+
+function spkaderfunctiesafdeling_new($form, &$form_state) {
+  civicrm_initialize();
+  $relationship_types = array();
+  $relationships = variable_get('spkaderfunctiesafdeling_new_relationship_types', array());
+  foreach($relationships as $rel_type_id => $check) {
+    if ($check) {
+      $relationship_types[$rel_type_id] = civicrm_api3('RelationshipType', 'getvalue', array(
+        'id' => $rel_type_id,
+        'return' => 'label_a_b'
+      ));
+    }
+  }
+
+  $form['spkaderfunctiesafdeling_description'] = array(
+    '#markup' => '<h3>Voeg een nieuwe kaderfunctie toe</h3><p>Hieronder kunt een nieuwe kaderfunctie toevoegen</p>',
+  );
+
+  $form['spkaderfunctiesafdeling_relationship_type'] = array(
+    '#type'          => 'select',
+    '#title'         => 'Relatietype',
+    '#options'       => $relationship_types,
+    '#description'   => 'Selecteer een relatietype',
+    '#required'      => true,
+  );
+
+  $form['spkaderfunctiesafdeling_contact_id_b'] = array(
+    '#type'          => 'select',
+    '#title'         => 'Afdeling/Regio/Provincie',
+    '#options'       => spkaderfunctiesafdeling_get_afdelingscontacten(),
+    '#description'   => 'Selecteer afdeling/regio/provincie',
+    '#required'      => true,
+  );
+
+  $form['spkaderfunctiesafdeling_contact_id_a'] = array(
+    '#type'          => 'select',
+    '#title'         => 'Persoon',
+    '#options'       => spkaderfunctiesafdeling_get_individuals(),
+    '#description'   => 'Selecteer een persoon',
+    '#required'      => true,
+  );
+
+  $form['spkaderfunctiesafdeling_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Aanmaken'),
+  );
+
+  $form['cancel']['#type'] = 'submit';
+  $form['cancel']['#value'] = t('Cancel');
+  $form['cancel']['#submit_type'] = 'button';
+  $form['cancel']['#submit'] = array('spkaderfunctiesafdeling_cancel');
+  $form['cancel']['#limit_validation_errors'] = array();
+  $form['cancel']['#validate'] = array();
+
+  return $form;
+}
+
+function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
+  civicrm_initialize();
+  $relationship_type_id = $form_state['values']['spkaderfunctiesafdeling_relationship_type'];
+  $contact_a = civicrm_api3('Contact', 'getsingle', array('id' => $form_state['values']['spkaderfunctiesafdeling_contact_id_a']));
+  $contact_b = civicrm_api3('Contact', 'getsingle', array('id' => $form_state['values']['spkaderfunctiesafdeling_contact_id_b']));
+  $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $relationship_type_id));
+  if ($contact_a['contact_type'] != $relationship_type['contact_type_a'] || ($relationship_type['contact_sub_type_a'] && !in_array($relationship_type['contact_sub_type_a'], $contact_a['contact_sub_type']))) {
+    form_set_error('spkaderfunctiesafdeling_contact_id_a', t('Ongeldig contact type'));
+  }
+  if ($contact_b['contact_type'] != $relationship_type['contact_type_b'] || ($relationship_type['contact_sub_type_b'] && !in_array($relationship_type['contact_sub_type_b'], $contact_b['contact_sub_type']))) {
+    form_set_error('spkaderfunctiesafdeling_contact_id_b', t('Ongeldig contact type'));
+  }
+}
+
+function spkaderfunctiesafdeling_new_submit($form, &$form_state) {
+  civicrm_initialize();
+  $now = new DateTime();
+  $params['relationship_type_id'] = $form_state['values']['spkaderfunctiesafdeling_relationship_type'];
+  $params['contact_id_a'] = $form_state['values']['spkaderfunctiesafdeling_contact_id_a'];
+  $params['contact_id_b'] = $form_state['values']['spkaderfunctiesafdeling_contact_id_b'];
+  $params['is_active'] = 1;
+  $params['start_date'] = $now->format('Ymd');
+  civicrm_api3('Relationship', 'create', $params);
+  $form_state['redirect'] = 'kaderfuncties-afdeling';
+}
+
+function spkaderfunctiesafdeling_beeindig($form, &$form_state, $relationship_id) {
+  $form_state['relationship_id'] = $relationship_id;
+
+  civicrm_initialize();
+  $relationship = civicrm_api3('Relationship', 'getsingle', array('id' => $relationship_id));
+  $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $relationship['relationship_type_id']));
+  $contact_a = civicrm_api3('Contact', 'getsingle', array('id' => $relationship['contact_id_a']));
+  $contact_b = civicrm_api3('Contact', 'getsingle', array('id' => $relationship['contact_id_b']));
+
+  $form['spkaderfunctiesafdeling_description'] = array(
+    '#markup' => '<h3>Beëindig een relatie</h3><p>Weet u zeker dat u dat u deze relatie wilt beëindigen?</p>',
+  );
+
+  $form['spkaderfunctiesafdeling_relatie'] = array(
+    '#markup' => '<p><strong>Contact A: </strong>'.$contact_a['display_name'].'<br><strong>Contact B: </strong> '.$contact_b['display_name'].'<br><strong>Relatietype</strong>'.$relationship_type['label_a_b'].'</p>',
+  );
+
+  $form['spkaderfunctiesafdeling_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Beëindig'),
+  );
+
+  $form['cancel']['#type'] = 'submit';
+  $form['cancel']['#value'] = t('Cancel');
+  $form['cancel']['#submit_type'] = 'button';
+  $form['cancel']['#submit'] = array('spkaderfunctiesafdeling_cancel');
+  $form['cancel']['#limit_validation_errors'] = array();
+  $form['cancel']['#validate'] = array();
+
+  return $form;
+}
+
+function spkaderfunctiesafdeling_cancel($form, &$form_state) {
+  $form_state['redirect'] = 'kaderfuncties-afdeling';
+}
+
+function spkaderfunctiesafdeling_beeindig_submit($form, &$form_state) {
+  $now = new DateTime();
+  $relationship_id = $form_state['relationship_id'];
+  $params['id'] = $relationship_id;
+  $params['end_date'] = $now->format('Ymd');
+  civicrm_initialize();
+  civicrm_api3('Relationship', 'create', $params);
+  $form_state['redirect'] = 'kaderfuncties-afdeling';
+}

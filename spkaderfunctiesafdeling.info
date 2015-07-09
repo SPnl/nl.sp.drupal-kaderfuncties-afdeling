@@ -1,0 +1,14 @@
+name =SP Kaderfuncties van afdelingen
+description = View met alle kaderfuncties van een afdeling plus de mogelijkheid om die te wijzigen
+version = 1.0
+core = 7.x
+package = sprbs
+
+files[] = config/drupal.inc
+files[] = config/civicrm.inc
+files[] = includes/civicrm.inc
+files[] = includes/utils.inc
+
+dependencies[] = views_php
+dependencies[] = civicrm
+dependencies[] = spcivicrmviews

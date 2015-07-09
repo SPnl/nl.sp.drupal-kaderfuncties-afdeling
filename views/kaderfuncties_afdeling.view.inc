@@ -39,6 +39,13 @@ $handler->display->display_options['style_options']['info'] = array(
     'empty_column' => 0,
   ),
 );
+/* Voet: Global: Text area */
+$handler->display->display_options['footer']['area']['id'] = 'area';
+$handler->display->display_options['footer']['area']['table'] = 'views';
+$handler->display->display_options['footer']['area']['field'] = 'area';
+$handler->display->display_options['footer']['area']['empty'] = TRUE;
+$handler->display->display_options['footer']['area']['content'] = '<ul class="tabs"><li class="add"><a href="'.url('kaderfuncties-afdeling/nieuw').'"><span class="icon add"></span>Voeg kaderfunctie toe</a></li></ul>';
+$handler->display->display_options['footer']['area']['format'] = 'filtered_html';
 /* No results behavior: Global: Unfiltered text */
 $handler->display->display_options['empty']['area_text_custom']['id'] = 'area_text_custom';
 $handler->display->display_options['empty']['area_text_custom']['table'] = 'views';

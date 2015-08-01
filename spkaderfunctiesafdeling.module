@@ -99,6 +99,7 @@ function spkaderfunctiesafdeling_menu() {
 }
 
 function spkaderfunctiesafdeling_admin_settings_form() {
+
   $form = array();
 
   $form['spkaderfunctiesafdeling_description'] = array(

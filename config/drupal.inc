@@ -31,12 +31,7 @@ class SpKaderfunctiesAfdelingConfigDrupal {
   }
 
   private function __construct() {
-    // Admin, applicatiebeheer CiviCRM, afdelingsgebruiker CiviCRM, voorzitter
-    $this->rolesWithAccess = array(
-      3 => '3',
-      9 => '9',
-      7 => '7',
-    );
+    $this->rolesWithAccess[DRUPAL_AUTHENTICATED_RID] = DRUPAL_AUTHENTICATED_RID;
   }
 
   /**

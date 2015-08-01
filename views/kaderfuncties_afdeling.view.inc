@@ -54,23 +54,30 @@ $handler->display->display_options['empty']['area_text_custom']['label'] = 'Geen
 $handler->display->display_options['empty']['area_text_custom']['empty'] = TRUE;
 $handler->display->display_options['empty']['area_text_custom']['content'] = '<p>Er zijn geen kaderfuncties om te tonen. Je moet ingelogd zijn als voorzitter of organisatiesecretaris om hier een overzicht te zien van actieve kaderfuncties voor jouw afdeling.</p>';
 /* Relationship: CiviCRM Contacts: Drupal ID */
-/* Relationship: CiviCRM Contacts: Drupal ID */
 $handler->display->display_options['relationships']['drupal_id']['id'] = 'drupal_id';
 $handler->display->display_options['relationships']['drupal_id']['table'] = 'civicrm_contact';
 $handler->display->display_options['relationships']['drupal_id']['field'] = 'drupal_id';
 $handler->display->display_options['relationships']['drupal_id']['required'] = TRUE;
-/* Relationship: CiviCRM Custom: Geostelsel: Afdeling */
-$handler->display->display_options['relationships']['afdeling']['id'] = 'afdeling';
-$handler->display->display_options['relationships']['afdeling']['table'] = 'civicrm_value_geostelsel';
-$handler->display->display_options['relationships']['afdeling']['field'] = 'afdeling';
-$handler->display->display_options['relationships']['afdeling']['relationship'] = 'drupal_id';
-$handler->display->display_options['relationships']['afdeling']['label'] = 'Afdeling';
-$handler->display->display_options['relationships']['afdeling']['required'] = TRUE;
+/* Relationship: CiviCRM Contacts: CiviCRM Relationship (starting from contact A) */
+$handler->display->display_options['relationships']['relationship_id_a']['id'] = 'relationship_id_a';
+$handler->display->display_options['relationships']['relationship_id_a']['table'] = 'civicrm_contact';
+$handler->display->display_options['relationships']['relationship_id_a']['field'] = 'relationship_id_a';
+$handler->display->display_options['relationships']['relationship_id_a']['relationship'] = 'drupal_id';
+$handler->display->display_options['relationships']['relationship_id_a']['label'] = 'Voorzittersrelatie';
+$handler->display->display_options['relationships']['relationship_id_a']['required'] = TRUE;
+$handler->display->display_options['relationships']['relationship_id_a']['relationship_type'] = '0';
+/* Relationship: CiviCRM Relationships: Contact ID B */
+$handler->display->display_options['relationships']['contact_id_b_']['id'] = 'contact_id_b_';
+$handler->display->display_options['relationships']['contact_id_b_']['table'] = 'civicrm_relationship';
+$handler->display->display_options['relationships']['contact_id_b_']['field'] = 'contact_id_b_';
+$handler->display->display_options['relationships']['contact_id_b_']['relationship'] = 'relationship_id_a';
+$handler->display->display_options['relationships']['contact_id_b_']['label'] = 'Afdeling';
+$handler->display->display_options['relationships']['contact_id_b_']['required'] = TRUE;
 /* Relationship: CiviCRM Contacts: CiviCRM Relationship (starting from Contact B) */
 $handler->display->display_options['relationships']['relationship_id_b']['id'] = 'relationship_id_b';
 $handler->display->display_options['relationships']['relationship_id_b']['table'] = 'civicrm_contact';
 $handler->display->display_options['relationships']['relationship_id_b']['field'] = 'relationship_id_b';
-$handler->display->display_options['relationships']['relationship_id_b']['relationship'] = 'afdeling';
+$handler->display->display_options['relationships']['relationship_id_b']['relationship'] = 'contact_id_b_';
 $handler->display->display_options['relationships']['relationship_id_b']['label'] = 'Relatie vanuit afdeling';
 $handler->display->display_options['relationships']['relationship_id_b']['required'] = TRUE;
 $handler->display->display_options['relationships']['relationship_id_b']['relationship_type'] = '0';
@@ -147,7 +154,7 @@ $handler->display->display_options['fields']['relationship_type_id']['label'] = 
 $handler->display->display_options['fields']['relationship_type_id']['exclude'] = TRUE;
 $handler->display->display_options['fields']['relationship_type_id']['element_label_colon'] = FALSE;
 $handler->display->display_options['fields']['relationship_type_id']['separator'] = '';
-/* Veld: Global:  */
+/* Veld: Global: PHP */
 $handler->display->display_options['fields']['php']['id'] = 'php';
 $handler->display->display_options['fields']['php']['table'] = 'views';
 $handler->display->display_options['fields']['php']['field'] = 'php';
@@ -187,6 +194,13 @@ $handler->display->display_options['filters']['uid_current']['field'] = 'uid_cur
 $handler->display->display_options['filters']['uid_current']['relationship'] = 'drupal_id';
 $handler->display->display_options['filters']['uid_current']['value'] = '1';
 $handler->display->display_options['filters']['uid_current']['group'] = 1;
+/* Filter criterion: CiviCRM Relationships: Relationship Type A-to-B */
+$handler->display->display_options['filters']['relationship_type']['id'] = 'relationship_type';
+$handler->display->display_options['filters']['relationship_type']['table'] = 'civicrm_relationship';
+$handler->display->display_options['filters']['relationship_type']['field'] = 'relationship_type';
+$handler->display->display_options['filters']['relationship_type']['relationship'] = 'relationship_id_a';
+$handler->display->display_options['filters']['relationship_type']['value'] = $civicrmConfig->getVoorzitterRelationshipTypes();
+$handler->display->display_options['filters']['relationship_type']['group'] = 1;
 /* Filter criterion: CiviCRM Relationships: Is Relationship Active */
 $handler->display->display_options['filters']['is_active']['id'] = 'is_active';
 $handler->display->display_options['filters']['is_active']['table'] = 'civicrm_relationship';

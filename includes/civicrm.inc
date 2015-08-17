@@ -73,3 +73,43 @@ function spkaderfunctiesafdeling_get_individuals() {
   }
   return $return;
 }
+
+function spkaderfunctiesafdeling_log_activity_new_relationship($params) {
+  $session = CRM_Core_Session::singleton();
+  $activity['activity_type_id'] = spkaderfunctiesafdeling_get_activity_type_id('Nieuwe relatie');
+  $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $params['relationship_type_id']));
+  $activity['subject'] = 'Nieuw relatie ('.$relationship_type['label_a_b'].')';
+  $activity['target_contact_id'] = array(
+    $params['contact_id_a'],
+    $params['contact_id_b'],
+  );
+  civicrm_api3('Activity', 'create', $activity);
+}
+
+function spkaderfunctiesafdeling_log_activity_end_relationship($params) {
+  $session = CRM_Core_Session::singleton();
+  $activity['activity_type_id'] = spkaderfunctiesafdeling_get_activity_type_id('Relatie beëindigd');
+  $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $params['relationship_type_id']));
+  $activity['subject'] = 'Relatie beëindigd ('.$relationship_type['label_a_b'].')';
+  $activity['target_contact_id'] = array(
+    $params['contact_id_a'],
+    $params['contact_id_b'],
+  );
+  civicrm_api3('Activity', 'create', $activity);
+}
+
+function spkaderfunctiesafdeling_get_activity_type_id($name) {
+  $activity_option_group = civicrm_api3('OptionGroup', 'getvalue', array('return' => 'id', 'name' => 'activity_type'));
+  try {
+    $activity = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $activity_option_group, 'name' => $name));
+    return $activity['value'];
+  } catch (Exception $e) {
+    $params = array();
+    $params['name'] = $name;
+    $params['label'] = $name;
+    $params['option_group_id'] = $activity_option_group;
+    civicrm_api3('OptionValue', 'create', $params);
+    $activity = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $activity_option_group, 'name' => $name));
+    return $activity['value'];
+  }
+}

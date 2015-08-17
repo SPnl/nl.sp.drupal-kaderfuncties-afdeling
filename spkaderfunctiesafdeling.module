@@ -204,7 +204,10 @@ function spkaderfunctiesafdeling_new_submit($form, &$form_state) {
   $params['contact_id_b'] = $form_state['values']['spkaderfunctiesafdeling_contact_id_b'];
   $params['is_active'] = 1;
   $params['start_date'] = $now->format('Ymd');
+
   civicrm_api3('Relationship', 'create', $params);
+  spkaderfunctiesafdeling_log_activity_new_relationship($params);
+
   $form_state['redirect'] = 'kaderfuncties-afdeling';
 }
 
@@ -250,6 +253,8 @@ function spkaderfunctiesafdeling_beeindig_submit($form, &$form_state) {
   $params['id'] = $relationship_id;
   $params['end_date'] = $now->format('Ymd');
   civicrm_initialize();
+  $relationship = civicrm_api3('Relationship', 'getsingle', array('id' => $relationship_id));
   civicrm_api3('Relationship', 'create', $params);
+  spkaderfunctiesafdeling_log_activity_end_relationship($relationship);
   $form_state['redirect'] = 'kaderfuncties-afdeling';
 }

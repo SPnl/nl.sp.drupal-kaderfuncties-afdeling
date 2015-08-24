@@ -76,7 +76,7 @@ function spkaderfunctiesafdeling_get_individuals() {
 
 function spkaderfunctiesafdeling_log_activity_new_relationship($params) {
   $session = CRM_Core_Session::singleton();
-  $activity['activity_type_id'] = spkaderfunctiesafdeling_get_activity_type_id('Nieuwe relatie');
+  $activity['activity_type_id'] = (int) spkaderfunctiesafdeling_get_activity_type_id('Nieuwe relatie');
   $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $params['relationship_type_id']));
   $activity['subject'] = 'Nieuw relatie ('.$relationship_type['label_a_b'].')';
   $activity['target_contact_id'] = array(
@@ -88,7 +88,7 @@ function spkaderfunctiesafdeling_log_activity_new_relationship($params) {
 
 function spkaderfunctiesafdeling_log_activity_end_relationship($params) {
   $session = CRM_Core_Session::singleton();
-  $activity['activity_type_id'] = spkaderfunctiesafdeling_get_activity_type_id('Relatie beëindigd');
+  $activity['activity_type_id'] = (int) spkaderfunctiesafdeling_get_activity_type_id('Relatie beëindigd');
   $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $params['relationship_type_id']));
   $activity['subject'] = 'Relatie beëindigd ('.$relationship_type['label_a_b'].')';
   $activity['target_contact_id'] = array(

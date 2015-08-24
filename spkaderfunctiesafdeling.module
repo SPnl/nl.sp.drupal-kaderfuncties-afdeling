@@ -194,6 +194,19 @@ function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
   if ($contact_b['contact_type'] != $relationship_type['contact_type_b'] || ($relationship_type['contact_sub_type_b'] && !in_array($relationship_type['contact_sub_type_b'], $contact_b['contact_sub_type']))) {
     form_set_error('spkaderfunctiesafdeling_contact_id_b', t('Ongeldig contact type'));
   }
+
+  //check if relationship al bestaat
+  try {
+    $relatioship = civicrm_api3('Relationship', 'getsingle', array(
+      'is_active' => 1,
+      'relationship_type_id' => $relationship_type_id,
+      'contact_id_a' => $contact_a['id'],
+      'contact_id_b' => $contact_b['id'],
+    ));
+    form_set_error('spkaderfunctiesafdeling_relationship_type', t('Er bestaat al een actieve relatie'));
+  } catch (Exception $e) {
+    //do nothing
+  }
 }
 
 function spkaderfunctiesafdeling_new_submit($form, &$form_state) {

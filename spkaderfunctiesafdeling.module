@@ -196,17 +196,18 @@ function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
   }
 
   //check if relationship al bestaat
-  try {
-    $relatioship = civicrm_api3('Relationship', 'getsingle', array(
-      'is_active' => 1,
-      'relationship_type_id' => $relationship_type_id,
-      'contact_id_a' => $contact_a['id'],
-      'contact_id_b' => $contact_b['id'],
-    ));
-    form_set_error('spkaderfunctiesafdeling_relationship_type', t('Er bestaat al een actieve relatie'));
-  } catch (Exception $e) {
-    //do nothing
+  $relatioship = civicrm_api3('Relationship', 'get', array(
+    'status_id' => CRM_Contact_BAO_Relationship::CURRENT,
+    'relationship_type_id' => $relationship_type_id,
+    'contact_id' => $contact_a['id'],
+  ));
+  foreach($relatioship['values'] as $rel) {
+    if ($rel['contact_id_b'] == $contact_b['id'] && $rel['contact_id_a'] == $contact_a['id']) {
+      form_set_error('spkaderfunctiesafdeling_relationship_type', t('Er bestaat al een actieve relatie'));
+      break;
+    }
   }
+
 }
 
 function spkaderfunctiesafdeling_new_submit($form, &$form_state) {

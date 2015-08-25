@@ -95,7 +95,40 @@ function spkaderfunctiesafdeling_menu() {
     'access arguments' => array(),
     'weight'           => -100
   );
+  $items['kaderfuncties-afdeling/autocomplete'] = array(
+    'title' => 'Autocomplete',
+    'page callback' => 'spkaderfunctiesafdeling_autocomplete',
+    'access callback' => 'spkaderfunctiesafdeling_check_new',
+    'access arguments' => array(),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
+}
+
+function spkaderfunctiesafdeling_autocomplete($string="") {
+  civicrm_initialize();
+  $session = CRM_Core_Session::singleton();
+  list($aclFrom, $aclWhere) = CRM_Contact_BAO_Contact_Permission::cacheClause('contact_a');
+  $params = array();
+  $sql = "SELECT contact_a.id, contact_a.display_name
+          FROM civicrm_contact contact_a
+          {$aclFrom}
+          WHERE contact_a.contact_type = 'Individual' AND contact_a.is_deleted = 0 AND contact_a.is_deceased = 0 AND {$aclWhere}
+          ";
+  if (!empty($string)) {
+    $sql .= " AND (contact_a.display_name LIKE %1 OR contact_a.sort_name LIKE %1 OR CONVERT(contact_a.id, CHAR) LIKE %1)";
+    $params[1] = array('%'.$string.'%', 'String');
+  }
+  $sql .= " ORDER BY contact_a.sort_name LIMIT 0,10";
+  $return = array();
+  $dao = CRM_Core_DAO::executeQuery($sql, $params);
+  while($dao->fetch()) {
+    if ($session->getLoggedInContactID() != $dao->id) {
+      $name = $dao->display_name . " (Lidnr: " . $dao->id . ")";
+      $return[$name] = $name;
+    }
+  }
+  drupal_json_output($return);
 }
 
 function spkaderfunctiesafdeling_admin_settings_form() {
@@ -160,11 +193,12 @@ function spkaderfunctiesafdeling_new($form, &$form_state) {
   );
 
   $form['spkaderfunctiesafdeling_contact_id_a'] = array(
-    '#type'          => 'select',
-    '#title'         => 'Persoon',
-    '#options'       => spkaderfunctiesafdeling_get_individuals(),
-    '#description'   => 'Selecteer een persoon',
+    '#type' => 'textfield',
+    '#title' => t('Persoon'),
     '#required'      => true,
+    '#description'   => 'Selecteer een persoon',
+    // The autocomplete path is provided in hook_menu in ajax_example.module.
+    '#autocomplete_path' => 'kaderfuncties-afdeling/autocomplete',
   );
 
   $form['spkaderfunctiesafdeling_submit'] = array(
@@ -183,11 +217,28 @@ function spkaderfunctiesafdeling_new($form, &$form_state) {
 }
 
 function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
+  $contact_a = $form_state['values']['spkaderfunctiesafdeling_contact_id_a'];
+  $matches = array();
+  preg_match("/\w+\s+\(Lidnr: (\d+)\)/i", $contact_a, $matches);
+  $contact_a_id = (int) $matches[1];
+
   civicrm_initialize();
   $relationship_type_id = $form_state['values']['spkaderfunctiesafdeling_relationship_type'];
-  $contact_a = civicrm_api3('Contact', 'getsingle', array('id' => $form_state['values']['spkaderfunctiesafdeling_contact_id_a']));
-  $contact_b = civicrm_api3('Contact', 'getsingle', array('id' => $form_state['values']['spkaderfunctiesafdeling_contact_id_b']));
-  $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $relationship_type_id));
+  try {
+    $contact_a = civicrm_api3('Contact', 'getsingle', array('id' => $contact_a_id));
+  } catch (Exception $e) {
+    form_set_error('spkaderfunctiesafdeling_contact_id_a', t('Persoon is een verplicht veld'));
+  }
+  try {
+    $contact_b = civicrm_api3('Contact', 'getsingle', array('id' => $form_state['values']['spkaderfunctiesafdeling_contact_id_b']));
+  } catch (Exception $e) {
+    form_set_error('spkaderfunctiesafdeling_contact_id_b', t('Afdeling/Regio/Provincie is verplicht'));
+  }
+  try {
+    $relationship_type = civicrm_api3('RelationshipType', 'getsingle', array('id' => $relationship_type_id));
+  } catch (Exception $e) {
+    form_set_error('spkaderfunctiesafdeling_relationship_type', 'Ongeldige invoer');
+  }
   if ($contact_a['contact_type'] != $relationship_type['contact_type_a'] || ($relationship_type['contact_sub_type_a'] && !in_array($relationship_type['contact_sub_type_a'], $contact_a['contact_sub_type']))) {
     form_set_error('spkaderfunctiesafdeling_contact_id_a', t('Ongeldig contact type'));
   }
@@ -199,7 +250,7 @@ function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
   $relatioship = civicrm_api3('Relationship', 'get', array(
     'status_id' => CRM_Contact_BAO_Relationship::CURRENT,
     'relationship_type_id' => $relationship_type_id,
-    'contact_id' => $contact_a['id'],
+    'contact_id' => $contact_a_id
   ));
   foreach($relatioship['values'] as $rel) {
     if ($rel['contact_id_b'] == $contact_b['id'] && $rel['contact_id_a'] == $contact_a['id']) {
@@ -211,10 +262,15 @@ function spkaderfunctiesafdeling_new_validate($form, &$form_state) {
 }
 
 function spkaderfunctiesafdeling_new_submit($form, &$form_state) {
+  $contact_a = $form_state['values']['spkaderfunctiesafdeling_contact_id_a'];
+  $matches = array();
+  preg_match("/\w+\s+\(Lidnr: (\d+)\)/i", $contact_a, $matches);
+  $contact_a_id = (int) $matches[1];
+
   civicrm_initialize();
   $now = new DateTime();
   $params['relationship_type_id'] = $form_state['values']['spkaderfunctiesafdeling_relationship_type'];
-  $params['contact_id_a'] = $form_state['values']['spkaderfunctiesafdeling_contact_id_a'];
+  $params['contact_id_a'] = $contact_a_id;
   $params['contact_id_b'] = $form_state['values']['spkaderfunctiesafdeling_contact_id_b'];
   $params['is_active'] = 1;
   $params['start_date'] = $now->format('Ymd');

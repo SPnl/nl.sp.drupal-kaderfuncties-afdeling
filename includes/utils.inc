@@ -29,3 +29,12 @@ function spkaderfunctiesafdeling_check_new() {
   }
   return true;
 }
+
+function spkaderfunctiesafdeling_check_autocomplete() {
+  civicrm_initialize();
+  $individuals = spkaderfunctiesafdeling_get_individuals();
+  if (empty($individuals)) {
+    return false;
+  }
+  return true;
+}

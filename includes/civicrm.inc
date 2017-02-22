@@ -58,7 +58,9 @@ function spkaderfunctiesafdeling_get_afdelingscontacten() {
 function spkaderfunctiesafdeling_get_individuals() {
   civicrm_initialize();
   $session = CRM_Core_Session::singleton();
-  list($aclFrom, $aclWhere) = CRM_Contact_BAO_Contact_Permission::cacheClause('contact_a');
+  $aclContactCache = \Civi::service('acl_contact_cache');
+  $aclWhere = $aclContactCache->getAclWhereClause(CRM_Core_Permission::VIEW, 'contact_a');
+  $aclFrom = $aclContactCache->getAclJoin(CRM_Core_Permission::VIEW, 'contact_a');
   $sql = "SELECT contact_a.id, contact_a.display_name
           FROM civicrm_contact contact_a
           {$aclFrom}

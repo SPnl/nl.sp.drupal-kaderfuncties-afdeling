@@ -1,0 +1,13 @@
+{
+  "name": "SPnl/nl.sp.drupal-kaderfuncties-afdeling",
+  "description": "View met alle kaderfuncties van een afdeling plus de mogelijkheid om die te wijzigen",
+  "version": "1.1.0",
+  "type": "drupal-module",
+  "authors": [
+    {
+      "name": "Jaap Jansma",
+      "email": "helpdesk@civicoop.org"
+    }
+  ],
+  "license": "GPL-2.0"
+}

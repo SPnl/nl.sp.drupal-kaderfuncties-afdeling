@@ -1,7 +1,7 @@
 {
-  "name": "SPnl/nl.sp.drupal-kaderfuncties-afdeling",
+  "name": "spnl/nl.sp.drupal-kaderfuncties-afdeling",
   "description": "View met alle kaderfuncties van een afdeling plus de mogelijkheid om die te wijzigen",
-  "type": "drupal-module",
+  "type": "drupal-custom-module",
   "authors": [
     {
       "name": "Jaap Jansma",

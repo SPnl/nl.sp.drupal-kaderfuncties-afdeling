@@ -35,7 +35,7 @@ class SpKaderfunctiesAfdelingConfigCiviCRM {
   private function __construct() {
     civicrm_initialize();
 
-    $voorzitterRelationshipTypesNameAB = array('sprel_voorzitter_afdeling', 'sprel_vervangendvoorzitter_afdeling', 'sprel_organisatiesecretaris_afdeling');
+    $voorzitterRelationshipTypesNameAB = array('sprel_voorzitter_afdeling', 'sprel_vervangendvoorzitter_afdeling', 'sprel_organisatiesecretaris_afdeling', 'Gebruiker CiviCRM');
     $this->loadVoorzitterRelationshipTypes($voorzitterRelationshipTypesNameAB);
 
     $this->contactSubTypeForButton = array(
